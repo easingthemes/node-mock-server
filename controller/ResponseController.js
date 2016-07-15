@@ -4,6 +4,7 @@
 var Utils = require('../lib/Utils'),
 	util = require('util'),
 	extend = util._extend,
+	log = require('chip')(),
 	AppControllerSingleton = require('./AppController'),
 	appController = AppControllerSingleton.getInstance(),
 	GetResponse = require('../lib/GetResponse');
@@ -48,18 +49,26 @@ ResponseController.prototype = extend(ResponseController.prototype, {
 	_viewResponse: function (req, res) {
 		var data,
 			response = new GetResponse({
-			path: req.query.path,
-			method: req.query.method,
-			expected: req.query.expected
-		}, this.options);
+				path: req.query.path,
+				method: req.query.method,
+				expected: req.query.expected
+			}, this.options);
 
 		data = response.get();
 
+		if (typeof data === 'object') {
+			res.send(JSON.stringify(data, null, 2));
+			res.end();
+			return;
+		}
+
 		try {
-			data = JSON.parse(data);
+			res.send(JSON.stringify(JSON.parse(data), null, 2));
+			res.end();
+			return;
 		} catch (err) {}
 
-		res.send(JSON.stringify(data, null, 2));
+		res.send(data);
 		res.end();
 	},
 
@@ -86,7 +95,7 @@ ResponseController.prototype = extend(ResponseController.prototype, {
 		});
 
 		if (process.env.NODE_ENV !== 'test') {
-			console.log('Expected response set. Linkable Url: ' + linkableUrl);
+			log.info('Expected response set. Linkable Url: ' + linkableUrl);
 		}
 
 		res.end();

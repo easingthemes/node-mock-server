@@ -1,9 +1,12 @@
-[![Build Status](https://travis-ci.org/smollweide/node-mock-server.svg)](https://travis-ci.org/smollweide/node-mock-server)
-[![Dependencies](https://david-dm.org/smollweide/node-mock-server.svg)](https://david-dm.org/smollweide/node-mock-server)
 
 # node-mock-server
 
 > File based Node API mock server
+
+[![Build Status](https://img.shields.io/travis/smollweide/node-mock-server/master.svg?maxAge=2592000)](https://travis-ci.org/smollweide/node-mock-server)
+[![Dependencies](https://img.shields.io/david/smollweide/node-mock-server/master.svg?maxAge=2592000)](https://david-dm.org/smollweide/node-mock-server)
+[![npm](https://img.shields.io/npm/v/node-mock-server.svg?maxAge=2592000)](https://www.npmjs.com/package/node-mock-server)
+[![npm](https://img.shields.io/npm/dt/node-mock-server.svg?maxAge=2592000)](https://www.npmjs.com/package/node-mock-server)
 
 ![node-mock-server-ui.png](https://cloud.githubusercontent.com/assets/2912007/13898299/0ad93a76-edcd-11e5-8eb8-840471a0835b.png)
 
@@ -15,6 +18,8 @@
 - Multiple expected responses
 - Error cases
 - Swagger import
+    - DTO import
+    - DTO response function
 - Mock response validation
 - DTO preview
 - DTO to Class converter
@@ -53,6 +58,11 @@ Default value: `'./rest'`
 
 A string value that is used to define the path to the rest API folder.
 
+#### options.dirName
+Type: `String`
+
+A string value that is used to define the root directory (__dirname).
+
 #### options.title
 Type: `String`
 Default value: `Api mock server`
@@ -87,7 +97,7 @@ A number value that is used to define the port.
 Type: `String|Array`
 Optional
 
-A string or array that is used to define where the functions are located.
+A string or array that is used to define where the response functions are located.
 
 #### options.contentType
 Type: `String`
@@ -199,11 +209,10 @@ Default value: `true`
 
 A boolean that is used to decide to replace an old description with the new (imported) description or not.
 
-#### options.swaggerImport.maxRefDeep
-Type: `Number`
-Default value: `1`
+#### options.swaggerImport.responseFuncPath
+Type: `String`
 
-A number that is used to define the deep of recursive DTO replacement.
+A string that is used to define where the imported response functions are located.
 
 
 ### Usage Examples
@@ -221,6 +230,7 @@ mockServer({});
 var mockServer = require('node-mock-server');
 mockServer({
 	restPath: __dirname + '/mock/rest',
+	dirName: __dirname,
     title: 'Api mock server',
     version: 2,
     urlBase: 'http://localhost:3003',
@@ -239,7 +249,7 @@ mockServer({
     	createErrorFile: true,
     	createEmptyFile: true,
     	overwriteExistingDescriptions: true,
-    	maxRefDeep: 1
+    	responseFuncPath: __dirname + '/func-imported'
     }
 });
 ```
@@ -302,14 +312,8 @@ Response will be:
 ## Mock response validation
 - In case of you using params (form or get) in mock data, you can simulate them by adding an [".request_data.json"](https://github.com/smollweide/node-mock-server/blob/master/example_rest_folder/products/%23%7BproductCode%7D/GET/mock/.request_data.json) file.
 
-## Release History
-- 0.1.0 Specification UI
-- 0.2.0 Mock Server
-- 0.2.3 UI with group navigation
-- 0.3.0 Populate functions in mock data and add Faker
-- 0.4.0 Allows explicit error messages and their status.
-- 0.5.0 Swagger import
-- 0.6.0 Mock response validation
-- 0.6.3 Prettify logs and bug fixes
-- 0.7.0 DTO import and DTO to class converter
-- 0.7.2 Dynamic path parameters in response json
+## License
+[MIT License](https://github.com/smollweide/node-mock-server/blob/master/LICENSE)
+
+## Changelog
+Please see the [CHANGELOG.md](https://github.com/smollweide/node-mock-server/blob/master/CHANGELOG.md)

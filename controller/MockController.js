@@ -2,9 +2,9 @@
 'use strict';
 
 var Utils = require('../lib/Utils'),
-	util = require('util'),
-	extend = util._extend,
+	extend = require('util')._extend,
 	ejs = require('ejs'),
+	log = require('chip')(),
 	faker = require('faker'),
 	AppControllerSingleton = require('./AppController'),
 	appController = AppControllerSingleton.getInstance();
@@ -108,9 +108,14 @@ MockController.prototype = extend(MockController.prototype, {
 			try {
 				responseData = extend(responseData, this._getFunc(this.options.funcPath));
 				responseData = extend(responseData, this._getDynamicPathParams(options));
+				responseData = extend(responseData, this._getResponseFiles(options, responseData));
+				responseData = extend(responseData, {
+					require: require,
+					__dirname: this.options.dirName
+				});
 				outStr = ejs.render(responseFile, responseData);
 			} catch (err) {
-				console.log(err);
+				log.log(err);
 			}
 
 			if (outStr) {
@@ -119,7 +124,7 @@ MockController.prototype = extend(MockController.prototype, {
 				options.res.send(responseFile);
 			}
 		} catch (err) {
-			console.log(err);
+			log.log(err);
 			options.res.end();
 		}
 
@@ -245,6 +250,31 @@ MockController.prototype = extend(MockController.prototype, {
 	},
 
 	/**
+	 * @method _getResponseFiles
+	 * @param {object} options
+	 * @param {object} responseData
+	 * @returns {object}
+	 * @private
+	 */
+	_getResponseFiles: function (options, responseData) {
+
+		var responses = {},
+			path = options.dir + 'mock',
+			files = this.readDir(path, ['.DS_Store']);
+
+		this.for(files, function (filesObj) {
+			try {
+				var fileData = this.readFile(filesObj.path);
+				responses[filesObj.file.replace('.json', '')] = JSON.parse(ejs.render(fileData, responseData));
+			} catch (err) {}
+		}.bind(this));
+
+		return {
+			response: responses
+		};
+	},
+
+	/**
 	 * @method _getExpectedResponse
 	 * @param {object} req
 	 * @param {string} dir
@@ -297,7 +327,7 @@ MockController.prototype = extend(MockController.prototype, {
 				list = _this.readDir(path, ['.DS_Store']);
 			} catch (err) {
 				if (process.env.NODE_ENV !== 'test') {
-					console.log('Folder "' + path + '" not found!');
+					log.error('Folder "' + path + '" not found!');
 				}
 			}
 

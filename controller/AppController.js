@@ -4,7 +4,7 @@
 var express = require('express'),
 	app = express(),
 	bodyParser = require('body-parser'),
-	fs = require('fs'),
+	log = require('chip')(),
 	util = require('util'),
 	extend = util._extend,
 	Utils = require('../lib/Utils'),
@@ -45,6 +45,8 @@ AppController.prototype = extend(AppController.prototype, {
 	 * @method init
 	 * called by constructor
 	 * @param {object} options
+	 * @param {string} options.dirName
+	 * @param {object} options.swaggerImport
 	 * @param {string|undefined} options.jsVersion
 	 * @public
 	 */
@@ -55,9 +57,18 @@ AppController.prototype = extend(AppController.prototype, {
 		this.options = options;
 		this.app = app;
 
+		if (!this.options.dirName) {
+			log.error('options.dirName is required (dirName: __dirname)');
+			return;
+		}
+
+		if (this.options.swaggerImport) {
+			this.options.swaggerImport.dirName = this.options.dirName;
+		}
+
 		app.listen(options.port, function () {
 			if (process.env.NODE_ENV !== 'test') {
-				console.log('server started at port ' + options.port);
+				log.info('server started at port ' + options.port);
 			}
 		});
 

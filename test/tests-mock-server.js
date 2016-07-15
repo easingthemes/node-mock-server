@@ -45,7 +45,7 @@ module.exports = function(serverOptions, _getFile) {
 
 	it('GET /products/{productCode}', function (done) {
 		_fetch({
-			url: baseUrl + '/products/31221?_expected=success',
+			url: baseUrl + '/products/31221?_expected=success-default',
 			success: function (data) {
 				var expected = _getFile(pathExpected + '/02.json');
 				assert.equal(data, expected);
@@ -89,8 +89,8 @@ module.exports = function(serverOptions, _getFile) {
 				assert.equal(typeof data, 'object');
 				assert.equal(typeof data.price, 'object');
 				assert.equal(typeof data.price.currency, 'string');
-				assert.equal(typeof data.card, 'object');
-				assert.equal(typeof data.card.name, 'string');
+				assert.equal(data.cards instanceof Array, true);
+				assert.equal(typeof data.cards[0].name, 'string');
 				done();
 			}
 		});
@@ -205,5 +205,39 @@ module.exports = function(serverOptions, _getFile) {
 			}
 		});
 	});
+
+	it('GET /products/{productCode} with response files - case default', function (done) {
+		_fetch({
+			url: baseUrl + '/products/31221?_expected=success',
+			success: function (data) {
+				var expected = _getFile(pathExpected + '/07.json');
+				assert.equal(data, expected);
+				done();
+			}
+		});
+	});
+
+	it('GET /products/{productCode} with response files - case productCode = 1', function (done) {
+		_fetch({
+			url: baseUrl + '/products/1?_expected=success',
+			success: function (data) {
+				var expected = _getFile(pathExpected + '/07-1.json');
+				assert.equal(data, expected);
+				done();
+			}
+		});
+	});
+
+	it('GET /products/{productCode} with response files - case productCode = 2', function (done) {
+		_fetch({
+			url: baseUrl + '/products/2?_expected=success',
+			success: function (data) {
+				var expected = _getFile(pathExpected + '/07-2.json');
+				assert.equal(data, expected);
+				done();
+			}
+		});
+	});
+
 
 };
