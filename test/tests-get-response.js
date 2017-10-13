@@ -13,9 +13,9 @@ module.exports = function(serverOptions, _getFile) {
 			expected;
 
 		response = new GetResponse({
-			path: serverOptions.restPath + '/products/#{productCode}',
+			path: serverOptions.restPath + '/products/{productCode}',
 			method: 'get',
-			expected: 'success'
+			expected: 'success-default'
 		}, serverOptions);
 		expected = _getFile(pathExpGetResponse + '/01.json');
 		data = response.get();
@@ -29,7 +29,7 @@ module.exports = function(serverOptions, _getFile) {
 			expected;
 
 		response = new GetResponse({
-			path: serverOptions.restPath + '/products/#{productCode}',
+			path: serverOptions.restPath + '/products/{productCode}',
 			method: 'post',
 			expected: 'success'
 		}, serverOptions);
@@ -44,14 +44,14 @@ module.exports = function(serverOptions, _getFile) {
 			data;
 
 		response = new GetResponse({
-			path: serverOptions.restPath + '/products/#{productCode}',
+			path: serverOptions.restPath + '/products/{productCode}',
 			method: 'get',
 			expected: 'faker'
 		}, serverOptions);
 		data = response.get();
 
 		assert.equal(typeof data.price, 'object');
-		assert.equal(typeof data.card, 'object');
+		assert.equal(data.cards instanceof Array, true);
 		assert.equal(typeof data.email, 'string');
 	});
 
@@ -61,7 +61,7 @@ module.exports = function(serverOptions, _getFile) {
 			data;
 
 		response = new GetResponse({
-			path: serverOptions.restPath + '/products/#{productCode}',
+			path: serverOptions.restPath + '/products/{productCode}',
 			method: 'get',
 			expected: 'func'
 		}, serverOptions);
@@ -78,13 +78,34 @@ module.exports = function(serverOptions, _getFile) {
 			data;
 
 		response = new GetResponse({
-			path: serverOptions.restPath + '/products/#{productCode}',
+			path: serverOptions.restPath + '/products/{productCode}',
 			method: 'get',
-			expected: 'request-data'
+			expected: 'request-data',
+			queryParams: {
+				currentPage: 3
+			}
 		}, serverOptions);
 		data = response.get();
 
 		assert.equal(data.currentPage, 3);
+	});
+
+	// REQUEST DATA call
+	it('response from GET /product/{productCode} - with request data from path', function() {
+		var response,
+			data;
+
+		response = new GetResponse({
+			path: serverOptions.restPath + '/products/test',
+			method: 'get',
+			expected: 'request-data',
+			queryParams: {
+				currentPage: 12
+			}
+		}, serverOptions);
+		data = response.get();
+
+		assert.equal(data.productCode, 'test');
 	});
 
 };

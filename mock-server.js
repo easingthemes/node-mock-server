@@ -1,263 +1,66 @@
-
 'use strict';
 
-var express = require('express'),
-	app = express(),
-	fs = require('fs'),
-	bodyParser = require('body-parser'),
-	Utils = require('./lib/Utils'),
-	_utils = new Utils(),
-	util = require('util'),
-	extend = util._extend,
-	ejs = require('ejs'),
-	Ui = require('./lib/ui'),
-	getResponseData = require('./lib/getResponseData'),
-	getFunc = require('./lib/getFunc'),
-	getPreferences = require('./lib/getPreferences'),
-	SwaggerImport = require('./lib/SwaggerImport'),
-	swaggerLog = require('./lib/SwaggerLog'),
-	GetResponse = require('./lib/GetResponse'),
-	ValidatorResponse = require('./lib/ValidatorResponse'),
-	ValidatorResponses = require('./lib/ValidatorResponses'),
-	validatorLog = require('./lib/ValidatorLog'),
-	findFolder = require('./lib/findFolder');
+/* eslint global-require: 0 */
+var AppControllerSingleton = require('./lib/controller/AppController');
+var versionCli = require('./lib/cli/version-cli');
+var helpCli = require('./lib/cli/help-cli');
+var swaggerImportCli = require('./lib/cli/swagger-import-cli');
+var validateCli = require('./lib/cli/validate-cli');
+var collectionsCli = require('./lib/cli/collections-cli');
+var createDefinedDirectories = require('./lib/commands/create-defined-directories');
 
-module.exports = function (options) {
+var processVersionIndex = process.argv.indexOf('--version');
+var processHelpIndex = process.argv.indexOf('--help');
+var processSwaggerImportIndex = process.argv.indexOf('swagger-import');
+var processValidateIndex = process.argv.indexOf('validate');
+var processCollectionsIndex = process.argv.indexOf('collections');
+var doExport;
 
-	var defaults = {
-			restPath: './rest',
-			title: 'Api mock server',
-			version: 1,
-			urlBase: 'http://localhost:3001',
-			urlPath: '/rest/v1',
-			port: 3001,
-			contentType: 'application/json',
-			accessControlExposeHeaders: 'X-Total-Count',
-			accessControlAllowOrigin: '*',
-			accessControlAllowMethods: 'GET, POST, PUT, OPTIONS, DELETE, PATCH, HEAD',
-			accessControlAllowHeaders: 'origin, x-requested-with, content-type'
-	}, obj;
+function runServer(options) {
 
-	obj = extend(defaults, options);
+	var appController = AppControllerSingleton.getInstance(options);
 
-	app.listen(obj.port, function () {
-		if (process.env.NODE_ENV !== 'test') {
-			console.log('server started at port ' + obj.port);
-		}
-	});
+	createDefinedDirectories(appController.options);
 
-	app.use('/src', express.static(__dirname + '/src'));
-	app.use('/node_modules', express.static(__dirname + '/node_modules'));
-	app.use(bodyParser.json());
-	app.use(bodyParser.urlencoded({ extended: true }));
-	app.set('view engine', 'ejs');
-	app.set('views', __dirname + '/views');
+	var UiController = require('./lib/controller/UiController');
+	var SchemaController = require('./lib/controller/SchemaController');
+	var SwaggerImportController = require('./lib/controller/SwaggerImportController');
+	var DTOController = require('./lib/controller/DTOController');
+	var ResponseController = require('./lib/controller/ResponseController');
+	var PreferencesController = require('./lib/controller/PreferencesController');
+	var ValidatorController = require('./lib/controller/ValidatorController');
+	var CollectionController = require('./lib/controller/CollectionController');
+	var FileOpenController = require('./lib/controller/FileOpenController');
 
-	// RENDER UI
-	app.get('/', function (req, res) {
+	var MockController = require('./lib/controller/MockController');
 
-		var ui = new Ui(obj),
-			data = ui.get('data');
+	return {
+		appController: appController,
+		uiController: new UiController(),
+		schemaController: new SchemaController(),
+		swaggerImportController: new SwaggerImportController(),
+		dtoController: new DTOController(),
+		ResponseController: new ResponseController(),
+		preferencesController: new PreferencesController(),
+		validatorController: new ValidatorController(),
+		collectionController: new CollectionController(),
+		fileOpenController: new FileOpenController(),
+		mockController: new MockController(),
+	};
+}
 
-		res.render('default.ejs', {
-			apiData: data,
-			title: obj.title,
-			swaggerImport: ui.get('swaggerImport'),
-			isSwaggerImportAvailable: ui.get('isSwaggerImportAvailable'),
-			version: obj.version,
-			urlBase: obj.urlBase,
-			urlPath: obj.urlPath
-		});
-	});
+if (processVersionIndex >= 0) {
+	doExport = versionCli;
+} else if (processHelpIndex >= 0) {
+	doExport = helpCli;
+} else if (processCollectionsIndex >= 0) {
+	doExport = collectionsCli;
+} else if (processSwaggerImportIndex >= 0) {
+	doExport = swaggerImportCli;
+} else if (processValidateIndex >= 0) {
+	doExport = validateCli.bind(null, runServer);
+} else {
+	doExport = runServer;
+}
 
-	// SERVICES
-	app.get('/service/mock-preview', function (req, res) {
-		res.send(_utils.readFile(req.query.path));
-	});
-
-	app.get('/service/schema', function (req, res) {
-		if (req.query && req.query.url) {
-
-			try {
-				var method = req.query.method || 'GET',
-					title = (req.query.type || '') + ' Schema',
-					path = (req.query.path || '');
-				res.render('service-schema.ejs', {
-					pageTitle: title,
-					title: title + ' | ' + method + ' | ' + path,
-					subTitle: path,
-					method: method,
-					methodLower: method.toLowerCase(),
-					schemaJSON: fs.readFileSync(req.query.url, 'utf8')
-				});
-			} catch (err) {
-				res.send('Not Found');
-			}
-
-		} else {
-			res.send('Not Found');
-		}
-	});
-
-	app.get('/service/schema-file', function (req, res) {
-		if (req.query && req.query.url) {
-			try {
-				res.send(fs.readFileSync(req.query.url, 'utf8'));
-			} catch (err) {
-				res.send('Not Found');
-			}
-
-		} else {
-			res.send('Not Found');
-		}
-	});
-
-	app.get('/service/swagger-import', function (req, res) {
-		var swaggerImporter = new SwaggerImport(options.swaggerImport);
-		swaggerImporter.doImport(function () {
-			res.send(swaggerLog.get());
-			res.end();
-		});
-	});
-
-	app.post('/service/expected-response', function (req, res) {
-		fs.writeFileSync(req.body.path + 'response.txt', req.body.value);
-		res.end();
-	});
-
-	app.post('/service/preferences', function (req, res) {
-
-		var data = getPreferences(obj);
-
-		data[req.body.key] = req.body.value;
-
-		fs.writeFileSync(obj.restPath + '/preferences.json', JSON.stringify(data));
-
-		res.end();
-	});
-
-	app.get('/service/response', function (req, res) {
-
-		var response = new GetResponse({
-			path: req.query.path,
-			method: req.query.method,
-			expected: req.query.expected
-		}, obj);
-
-		res.send(response.get());
-		res.end();
-	});
-
-	app.get('/service/validation/response', function (req, res) {
-
-		validatorLog.clear();
-
-		new ValidatorResponse({
-			path: req.query.path,
-			method: req.query.method,
-			expected: req.query.expected
-		}, obj);
-
-		res.send(validatorLog.get());
-		res.end();
-	});
-
-	app.get('/service/validation/responses', function (req, res) {
-
-		validatorLog.clear();
-
-		new ValidatorResponses({
-			restPath: obj.restPath
-		}, obj);
-
-		res.send(validatorLog.get());
-		res.end();
-	});
-
-	// MOCK SERVER
-	app.all('/*', function (req, res) {
-		var path = req.originalUrl.replace(obj.urlPath, obj.restPath),
-			method = req.method,
-			dir = findFolder(path, obj) + '/' + method + '/',
-			expectedResponse = 'success',
-			expectedResponseFilePath = dir + 'mock/response.txt',
-			preferences = getPreferences(obj),
-			timeout = 0,
-			responseFilePath;
-
-		if (path.search('favicon.ico') >= 0) {
-			res.end();
-			return true;
-		}
-
-		if (preferences && preferences.responseDelay) {
-			timeout = parseInt(preferences.responseDelay);
-		}
-
-		try {
-			expectedResponse = fs.readFileSync(expectedResponseFilePath, 'utf8');
-		} catch (err) {}
-
-		if (req.query && typeof req.query._expected === 'string') {
-			expectedResponse = req.query._expected;
-		}
-
-		if (req.headers && typeof req.headers._expected === 'string') {
-			expectedResponse = req.headers._expected;
-		}
-
-		responseFilePath = dir + 'mock/' + expectedResponse + '.json';
-
-		res.setHeader('Content-Type', obj.contentType);
-		res.setHeader('Access-Control-Expose-Headers', obj.accessControlExposeHeaders);
-		res.setHeader('Access-Control-Allow-Origin', obj.accessControlAllowOrigin);
-		res.setHeader('Access-Control-Allow-Methods', obj.accessControlAllowMethods);
-		res.setHeader('Access-Control-Allow-Headers', obj.accessControlAllowHeaders);
-
-		setTimeout(function () {
-
-			if (expectedResponse.search('error') >= 0) {
-				var status,
-					reg = /(error)(-)([0-9]{3})/.exec(expectedResponse);
-
-				if (reg === null) {
-					status = 500;
-				} else {
-					status = parseInt(reg[3]);
-				}
-
-				res.statusCode = status;
-				res.send(fs.readFileSync(responseFilePath, 'utf-8'));
-			} else if (method === 'HEAD') {
-				res.setHeader('X-Total-Count', Math.floor(Math.random() * 100));
-				res.end();
-			} else {
-
-				try {
-					var responseFile = fs.readFileSync(responseFilePath, 'utf-8'),
-						responseData = getResponseData(req, method),
-						outStr;
-
-					try {
-						responseData = extend(responseData, getFunc(obj.funcPath));
-						outStr = ejs.render(responseFile, responseData);
-					} catch (err) {
-						console.log(err);
-					}
-
-					if (outStr) {
-						res.send(outStr);
-					} else {
-						res.send(responseFile);
-					}
-				} catch (err) {
-					console.log(err);
-					res.end();
-				}
-			}
-		}, timeout);
-
-	});
-
-};
-
+module.exports = doExport;

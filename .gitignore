@@ -1,8 +1,11 @@
 .idea
+yarn.lock
 node_modules
 /preferences.json
-/example_rest_folder/*/*/*/mock/response.txt
-rest
+/demo/rest/*/*/*/mock/response.txt
 /test/tmp
+/test/func-imported
 /tmp
 npm-debug.log
+/func-imported
+package-lock.json
